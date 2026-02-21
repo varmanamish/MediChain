@@ -6,8 +6,11 @@ class ApiService {
   late Dio _dio;
   final SecureStorage _secureStorage = SecureStorage();
 
-  static const String baseUrl =
-      'http://10.0.2.2:8081'; // Change to your backend URL
+  static const String emulator = "10.0.2.2";
+  static const String phone = "192.168.0.131";
+
+  static const String baseUrl = "http://$phone:8081/api";
+  
   static const int connectTimeout = 30000; // 30 seconds
   static const int receiveTimeout = 30000; // 30 seconds
 

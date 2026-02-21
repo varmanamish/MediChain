@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medichain/auth/signup_page.dart';
+import 'package:medichain/services/user_service.dart';
 import 'package:medichain/storage/secure_storage.dart';
 import 'package:medichain/views/distributor/distributor_dashboard.dart';
 import 'package:medichain/views/end_user/end_user_dashboard.dart';
@@ -21,6 +22,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   final _secureStorage = SecureStorage();
+  final _userService = UserService();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -42,14 +44,15 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final success = await _authService.login(
+      final success = await _userService.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
       if (success && mounted) {
         final role = await _secureStorage.getUserRole();
-        _navigateToDashboard(role ?? 'end_user');
+        print("Role Used: $role");
+        _navigateToDashboard(role ?? 'END_USER');
       } else if (mounted) {
         setState(() {
           _errorMessage = 'Invalid email or password';
@@ -72,18 +75,19 @@ class _LoginPageState extends State<LoginPage> {
 
   void _navigateToDashboard(String role) {
     Widget dashboard;
+    print('Navigating to dashboard for role: $role');
 
     switch (role) {
-      case 'manufacturer':
+      case 'MANUFACTURER':
         dashboard = const ManufacturerDashboard();
         break;
-      case 'distributor':
+      case 'DISTRIBUTOR':
         dashboard = const DistributorDashboard();
         break;
-      case 'pharmacy':
+      case 'PHARMACY':
         dashboard = const PharmacyDashboard();
         break;
-      case 'end_user':
+      case 'END_USER':
         dashboard = const EndUserDashboard();
         break;
       default:

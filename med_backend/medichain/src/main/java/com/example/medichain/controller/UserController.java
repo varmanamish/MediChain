@@ -1,7 +1,7 @@
-//package com.example.demo.controller;
+//package com.example.medichain.controller;
 //
-//import com.example.demo.model.User;
-//import com.example.demo.repository.UserRepository;
+//import com.example.medichain.model.User;
+//import com.example.medichain.repository.UserRepository;
 //import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.http.HttpStatus;
 //import org.springframework.http.ResponseEntity;
@@ -75,10 +75,12 @@
 //    public void setPassword(String password) { this.password = password; }
 //}
 
-package com.example.demo.controller;
+package com.example.medichain.controller;
 
-import com.example.demo.model.User;
-import com.example.demo.repository.UserRepository;
+import com.example.medichain.config.JwtUtil;
+import com.example.medichain.dto.LoginRequest;
+import com.example.medichain.model.User;
+import com.example.medichain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -90,7 +92,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {"http://10.0.2.2", "http://localhost"}) // Allow both
+@CrossOrigin(origins = {"http://10.0.2.2", "http://localhost", "http://192.168.0.131"}) // Allow both
 public class UserController {
 
     @Autowired
@@ -98,6 +100,10 @@ public class UserController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
 
     @GetMapping("/health")
     public String health() {
@@ -179,46 +185,73 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        // Successful login - return user info
+        // Generate JWT
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().toString());
+
+        // Successful login response
         response.put("success", true);
         response.put("message", "Login successful!");
-        response.put("user", Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "email", user.getMailId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "role", user.getRole(),
-                "phone", user.getPhone(),
-                "dob", user.getDob()
-        ));
+        response.put("token", token);
+        response.put("username", user.getUsername());
+        response.put("role", user.getRole());
+
+        return ResponseEntity.ok(response);
+
+        // Successful login - return user info
+//        response.put("success", true);
+//        response.put("message", "Login successful!");
+//        response.put("user", Map.of(
+//                "id", user.getId(),
+//                "username", user.getUsername(),
+//                "email", user.getMailId(),
+//                "firstName", user.getFirstName(),
+//                "lastName", user.getLastName(),
+//                "role", user.getRole(),
+//                "phone", user.getPhone(),
+//                "dob", user.getDob()
+//        ));
+
+        //return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok("Logged out");
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<Map<String, Object>> getProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        System.out.println("RAW Header:"+authHeader);
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Missing or invalid Authorization header"));
+        }
+
+        String token = authHeader.substring(7);
+        System.out.println(token);
+        System.out.println("Extracting...");
+
+        String username = jwtUtil.extractUsername(token);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("id", user.getId());
+        response.put("username", user.getUsername());
+        response.put("mailId", user.getMailId());
+        response.put("firstName", user.getFirstName());
+        response.put("lastName", user.getLastName());
+        response.put("role", user.getRole());
+        response.put("phone", user.getPhone());
+        response.put("dob", user.getDob());
 
         return ResponseEntity.ok(response);
     }
+
 }
 
-// DTO for login request
-class LoginRequest {
-    private String usernameOrEmail;
-    private String password;
-
-    // Getters and setters
-    public String getUsernameOrEmail() { return usernameOrEmail; }
-    public void setUsernameOrEmail(String usernameOrEmail) {
-        this.usernameOrEmail = usernameOrEmail;
-    }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    // Add toString for debugging
-    @Override
-    public String toString() {
-        return "LoginRequest{" +
-                "usernameOrEmail='" + usernameOrEmail + '\'' +
-                ", password='" + password + '\'' +
-                '}';
-    }
-}

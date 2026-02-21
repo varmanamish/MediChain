@@ -39,25 +39,25 @@ class AuthService {
   //   }
   // }
 
-  Future<bool> login(String usernameOrEmail, String password) async {
-    try {
-      final response = await _apiService.post('/api/login', {
-        'usernameOrEmail': usernameOrEmail,
-        'password': password,
-      });
+  // Future<bool> login(String usernameOrEmail, String password) async {
+  //   try {
+  //     final response = await _apiService.post('/api/login', {
+  //       'username': usernameOrEmail,
+  //       'password': password,
+  //     });
 
-      // Check if success is true
-      if (response.data['success'] == true) {
-        // Save user info to storage
-        await _secureStorage.saveUserData(response.data['user']);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Login error: $e');
-      return false;
-    }
-  }
+  //     // Check if success is true
+  //     if (response.data['success'] == true) {
+  //       // Save user info to storage
+  //       await _secureStorage.saveUserData(response.data['user']);
+  //       return true;
+  //     }
+  //     return false;
+  //   } catch (e) {
+  //     print('Login error: $e');
+  //     return false;
+  //   }
+  // }
 
   // Future<bool> register(Map<String, dynamic> userData) async {
   //   try {
@@ -119,29 +119,29 @@ class AuthService {
     }
   }
 
-  Future<User> getCurrentUser() async {
-    try {
-      final response = await _apiService.get('/api/user/profile/');
-      return User.fromJson(response.data);
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      throw Exception('Failed to get user profile: $e');
-    }
-  }
+  // Future<User> getCurrentUser() async {
+  //   try {
+  //     final response = await _apiService.get('/api/user/profile/');
+  //     return User.fromJson(response.data);
+  //   } on DioException catch (e) {
+  //     throw _handleDioError(e);
+  //   } catch (e) {
+  //     throw Exception('Failed to get user profile: $e');
+  //   }
+  // }
 
-  Future<bool> isLoggedIn() async {
-    final token = await _secureStorage.getToken();
-    if (token == null) return false;
+  // Future<bool> isLoggedIn() async {
+  //   final token = await _secureStorage.getToken();
+  //   if (token == null) return false;
 
-    // Optional: Validate token with backend
-    try {
-      await _apiService.get('/api/user/profile/');
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  //   // Optional: Validate token with backend
+  //   try {
+  //     await _apiService.get('/api/user/profile/');
+  //     return true;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
 
   Future<String?> refreshToken() async {
     try {
@@ -169,15 +169,15 @@ class AuthService {
     }
   }
 
-  Future<void> updateProfile(Map<String, dynamic> profileData) async {
-    try {
-      await _apiService.put('/api/user/profile/', profileData);
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      throw Exception('Failed to update profile: $e');
-    }
-  }
+  // Future<void> updateProfile(Map<String, dynamic> profileData) async {
+  //   try {
+  //     await _apiService.put('/api/user/profile/', profileData);
+  //   } on DioException catch (e) {
+  //     throw _handleDioError(e);
+  //   } catch (e) {
+  //     throw Exception('Failed to update profile: $e');
+  //   }
+  // }
 
   Future<void> changePassword(
     String currentPassword,

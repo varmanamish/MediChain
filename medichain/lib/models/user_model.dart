@@ -7,7 +7,7 @@ class User {
   final String mailId;
   final String phone;
   final String dob;
-  final String password;
+  final String? password;
   final String? confirmPassword;
   final bool isActive;
 
@@ -20,8 +20,8 @@ class User {
     required this.mailId,
     required this.phone,
     required this.dob,
-    required this.password,
-    this.confirmPassword,
+    this.password="",
+    this.confirmPassword="",
     this.isActive = true,
   });
 
@@ -35,7 +35,7 @@ class User {
       lastName: json['lastName'],
       mailId: json['mailId'],
       phone: json['phone'],
-      dob: json['dob'],
+      dob: json['dob'].substring(0, 10), // Extract date part only
       password: json['password'] ?? '',
       isActive: json['isActive'] ?? true,
     );
