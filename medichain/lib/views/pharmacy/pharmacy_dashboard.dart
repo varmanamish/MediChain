@@ -5,6 +5,9 @@ import 'package:medichain/views/profile_page.dart';
 import '../../services/auth_service.dart';
 import 'scan_qr_page.dart';
 import 'inventory_page.dart';
+import '../supply_chain/get_batch_page.dart';
+import '../supply_chain/history_page.dart';
+import '../supply_chain/verify_batch_page.dart';
 
 class PharmacyDashboard extends StatefulWidget {
   const PharmacyDashboard({super.key});
@@ -42,6 +45,26 @@ class _PharmacyDashboardState extends State<PharmacyDashboard> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'get') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GetBatchPage()),
+                );
+              }
+              if (value == 'history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BatchHistoryPage()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'get', child: Text('Get Batch')),
+              PopupMenuItem(value: 'history', child: Text('History')),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: _navigateToProfile,
@@ -393,9 +416,9 @@ class _PharmacyDashboardState extends State<PharmacyDashboard> {
   }
 
   void _navigateToVerify() {
-    // TODO: Implement drug verification
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Drug verification coming soon!')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const VerifyBatchPage()),
     );
   }
 

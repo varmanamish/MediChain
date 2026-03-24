@@ -1,0 +1,142 @@
+[
+  {
+    "id": "med-001",
+    "name": "Paracetamol",
+    "strength": "500mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-002",
+    "name": "Ibuprofen",
+    "strength": "400mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-003",
+    "name": "Amoxicillin",
+    "strength": "500mg",
+    "form": "Capsule"
+  },
+  {
+    "id": "med-004",
+    "name": "Azithromycin",
+    "strength": "250mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-005",
+    "name": "Ciprofloxacin",
+    "strength": "500mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-006",
+    "name": "Metformin",
+    "strength": "500mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-007",
+    "name": "Amlodipine",
+    "strength": "5mg",
+    "form": "Tablet"
+  },
+  { "id": "med-008", "name": "Losartan", "strength": "50mg", "form": "Tablet" },
+  {
+    "id": "med-009",
+    "name": "Atorvastatin",
+    "strength": "20mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-010",
+    "name": "Omeprazole",
+    "strength": "20mg",
+    "form": "Capsule"
+  },
+  {
+    "id": "med-011",
+    "name": "Cetirizine",
+    "strength": "10mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-012",
+    "name": "Loratadine",
+    "strength": "10mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-013",
+    "name": "Salbutamol",
+    "strength": "100mcg",
+    "form": "Inhaler"
+  },
+  {
+    "id": "med-014",
+    "name": "Prednisolone",
+    "strength": "5mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-015",
+    "name": "Doxycycline",
+    "strength": "100mg",
+    "form": "Capsule"
+  },
+  {
+    "id": "med-016",
+    "name": "Clopidogrel",
+    "strength": "75mg",
+    "form": "Tablet"
+  },
+  { "id": "med-017", "name": "Aspirin", "strength": "75mg", "form": "Tablet" },
+  {
+    "id": "med-018",
+    "name": "Levothyroxine",
+    "strength": "50mcg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-019",
+    "name": "Gabapentin",
+    "strength": "300mg",
+    "form": "Capsule"
+  },
+  {
+    "id": "med-020",
+    "name": "Sertraline",
+    "strength": "50mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-021",
+    "name": "Fluconazole",
+    "strength": "150mg",
+    "form": "Capsule"
+  },
+  {
+    "id": "med-022",
+    "name": "Furosemide",
+    "strength": "40mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-023",
+    "name": "Hydrochlorothiazide",
+    "strength": "25mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-024",
+    "name": "Vitamin C",
+    "strength": "500mg",
+    "form": "Tablet"
+  },
+  {
+    "id": "med-025",
+    "name": "Zinc Sulfate",
+    "strength": "20mg",
+    "form": "Tablet"
+  }
+]

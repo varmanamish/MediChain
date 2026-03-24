@@ -8,6 +8,9 @@ import '../../models/transaction_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/drug_service.dart';
 import 'verify_drug_page.dart';
+import '../supply_chain/get_batch_page.dart';
+import '../supply_chain/history_page.dart';
+import '../supply_chain/verify_batch_page.dart';
 
 class EndUserDashboard extends StatefulWidget {
   const EndUserDashboard({super.key});
@@ -173,7 +176,7 @@ class _EndUserDashboardState extends State<EndUserDashboard> {
   void _navigateToVerifyDrug() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const VerifyDrugScannerPage()),
+      MaterialPageRoute(builder: (context) => const VerifyBatchPage()),
     ).then((_) => _loadVerificationHistory());
   }
 
@@ -219,6 +222,26 @@ class _EndUserDashboardState extends State<EndUserDashboard> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'get') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GetBatchPage()),
+                );
+              }
+              if (value == 'history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BatchHistoryPage()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'get', child: Text('Get Batch')),
+              PopupMenuItem(value: 'history', child: Text('History')),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: _navigateToProfile,
@@ -830,35 +853,6 @@ class _EndUserDashboardState extends State<EndUserDashboard> {
       const SnackBar(
         content: Text('Issue reported successfully'),
         backgroundColor: Colors.green,
-      ),
-    );
-  }
-}
-
-// Placeholder for the QR scanner page
-class VerifyDrugScannerPage extends StatelessWidget {
-  const VerifyDrugScannerPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scan Drug QR Code'),
-        backgroundColor: Colors.purple.shade800,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
-            SizedBox(height: 20),
-            Text(
-              'QR Scanner Placeholder',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:medichain/views/profile_page.dart';
 import '../../storage/secure_storage.dart';
 import 'scan_qr_page.dart';
 import 'update_transit_page.dart';
+import '../supply_chain/get_batch_page.dart';
+import '../supply_chain/history_page.dart';
 
 class DistributorDashboard extends StatefulWidget {
   const DistributorDashboard({super.key});
@@ -44,6 +46,26 @@ class _DistributorDashboardState extends State<DistributorDashboard> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'get') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GetBatchPage()),
+                );
+              }
+              if (value == 'history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BatchHistoryPage()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'get', child: Text('Get Batch')),
+              PopupMenuItem(value: 'history', child: Text('History')),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: _navigateToProfile,

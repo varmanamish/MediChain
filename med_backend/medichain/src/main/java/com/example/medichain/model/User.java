@@ -110,7 +110,7 @@ public class User {
     public void setLastName(String lastName) { this.lastName = lastName; }
 
     public String getMailId() { return mailId; }
-    public void setEmail(String mailId) { this.mailId = mailId; }
+    public void setMailId(String mailId) { this.mailId = mailId; }
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }

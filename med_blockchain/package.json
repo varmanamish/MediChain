@@ -1,0 +1,13 @@
+{
+  "name": "supplychain-blockchain",
+  "version": "1.0.0",
+  "description": "Pharma Supply Chain Blockchain using Ganache + Hardhat",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy.js --network ganache"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.28.6"
+  }
+}

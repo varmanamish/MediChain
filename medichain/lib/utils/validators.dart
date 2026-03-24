@@ -65,8 +65,10 @@ class Validators {
   }
 
   // Required field validation
-  static String? validateRequired(String? value,
-      {String fieldName = 'This field'}) {
+  static String? validateRequired(
+    String? value, {
+    String fieldName = 'This field',
+  }) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName is required';
     }
@@ -112,9 +114,7 @@ class Validators {
     }
 
     // Basic international phone number validation
-    final phoneRegex = RegExp(
-      r'^[\+]?[1-9][\d]{0,15}$',
-    );
+    final phoneRegex = RegExp(r'^[\+]?[1-9][\d]{0,15}$');
 
     if (!phoneRegex.hasMatch(digitsOnly)) {
       return 'Please enter a valid phone number';
@@ -189,8 +189,10 @@ class Validators {
   }
 
   // Positive number validation
-  static String? validatePositiveNumber(String? value,
-      {String fieldName = 'Number'}) {
+  static String? validatePositiveNumber(
+    String? value, {
+    String fieldName = 'Number',
+  }) {
     if (value == null || value.isEmpty) {
       return '$fieldName is required';
     }
@@ -258,8 +260,10 @@ class Validators {
   }
 
   // Future date validation (date must be in the future)
-  static String? validateFutureDate(String? value,
-      {String fieldName = 'Date'}) {
+  static String? validateFutureDate(
+    String? value, {
+    String fieldName = 'Date',
+  }) {
     final dateError = validateDate(value, fieldName: fieldName);
     if (dateError != null) return dateError;
 
@@ -408,6 +412,35 @@ class Validators {
     return null;
   }
 
+  // Hex string validation (0x-prefixed)
+  static String? validateHexString(
+    String? value, {
+    String fieldName = 'Hex value',
+  }) {
+    final requiredError = validateRequired(value, fieldName: fieldName);
+    if (requiredError != null) return requiredError;
+
+    final hexRegex = RegExp(r'^0x[0-9a-fA-F]+$');
+    if (!hexRegex.hasMatch(value!)) {
+      return '$fieldName must be a 0x-prefixed hex string';
+    }
+
+    return null;
+  }
+
+  // Ethereum address validation
+  static String? validateEthAddress(String? value) {
+    final requiredError = validateRequired(value, fieldName: 'Address');
+    if (requiredError != null) return requiredError;
+
+    final ethRegex = RegExp(r'^0x[0-9a-fA-F]{40}$');
+    if (!ethRegex.hasMatch(value!)) {
+      return 'Address must be a valid Ethereum address';
+    }
+
+    return null;
+  }
+
   // Location validation
   static String? validateLocation(String? value) {
     final requiredError = validateRequired(value, fieldName: 'Location');
@@ -494,7 +527,9 @@ class Validators {
 
   // File type validation
   static String? validateFileType(
-      String? fileName, List<String> allowedExtensions) {
+    String? fileName,
+    List<String> allowedExtensions,
+  ) {
     if (fileName == null || fileName.isEmpty) {
       return 'File is required';
     }
@@ -528,7 +563,9 @@ class Validators {
 
   // Batch expiration validation
   static String? validateExpiryDate(
-      DateTime? manufactureDate, DateTime? expiryDate) {
+    DateTime? manufactureDate,
+    DateTime? expiryDate,
+  ) {
     if (manufactureDate == null || expiryDate == null) {
       return null; // Let individual date validators handle null cases
     }
@@ -564,7 +601,7 @@ class Validators {
         'batch_id',
         'drug_name',
         'manufacturer_id',
-        'blockchain_hash'
+        'blockchain_hash',
       ];
       for (final field in requiredFields) {
         if (!data.containsKey(field) || data[field] == null) {
@@ -593,8 +630,10 @@ class Validators {
 
   // Transaction type validation
   static String? validateTransactionType(String? value) {
-    final requiredError =
-        validateRequired(value, fieldName: 'Transaction type');
+    final requiredError = validateRequired(
+      value,
+      fieldName: 'Transaction type',
+    );
     if (requiredError != null) return requiredError;
 
     final validTypes = ['manufacture', 'ship', 'receive', 'sell', 'recall'];

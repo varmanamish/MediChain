@@ -1,112 +1,153 @@
-// lib/views/manufacturer/create_batch_page.dart
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../models/drug_batch_model.dart';
-import '../../services/drug_service.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../models/supply_chain_models.dart';
+import '../../services/supply_chain_service.dart';
+import '../../utils/hash_utils.dart';
+import '../../utils/validators.dart';
 import '../../widgets/custom_text_field.dart';
 
 class CreateBatchPage extends StatefulWidget {
   const CreateBatchPage({super.key});
 
   @override
-  _CreateBatchPageState createState() => _CreateBatchPageState();
+  State<CreateBatchPage> createState() => _CreateBatchPageState();
 }
 
 class _CreateBatchPageState extends State<CreateBatchPage> {
   final _formKey = GlobalKey<FormState>();
-  final DrugService _drugService = DrugService();
+  final SupplyChainService _supplyChainService = SupplyChainService();
 
-  // Form controllers
-  final TextEditingController _drugNameController = TextEditingController();
   final TextEditingController _batchIdController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _compositionController = TextEditingController();
-  final TextEditingController _dosageFormController = TextEditingController();
-  final TextEditingController _storageConditionsController =
-      TextEditingController();
-
-  // Dates
-  DateTime? _manufactureDate;
-  DateTime? _expiryDate;
+  final TextEditingController _metadataHashController = TextEditingController();
+  final TextEditingController _metadataJsonController = TextEditingController();
 
   bool _isLoading = false;
-  bool _generateBatchId = true;
+  CreateBatchResponse? _lastResponse;
+  List<Map<String, dynamic>> _medicines = [];
+  Map<String, dynamic>? _selectedMedicine;
 
   @override
   void initState() {
     super.initState();
-    _generateBatchIdController();
-  }
-
-  void _generateBatchIdController() {
-    if (_generateBatchId) {
-      final now = DateTime.now();
-      final batchId = 'B${now.millisecondsSinceEpoch}';
-      _batchIdController.text = batchId;
-    }
+    _loadMedicines();
+    _generateBatchId();
   }
 
   @override
   void dispose() {
-    _drugNameController.dispose();
     _batchIdController.dispose();
-    _quantityController.dispose();
-    _compositionController.dispose();
-    _dosageFormController.dispose();
-    _storageConditionsController.dispose();
+    _metadataHashController.dispose();
+    _metadataJsonController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMedicines() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/medicines.json');
+      final decoded = jsonDecode(jsonString) as List<dynamic>;
+      setState(() {
+        _medicines = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load medicines: $e')));
+    }
+  }
+
+  void _generateMetadataHash() {
+    final payload = _metadataJsonController.text.trim();
+    if (payload.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter metadata JSON first.')),
+      );
+      return;
+    }
+
+    try {
+      final hash = HashUtils.sha256HexFromJson(payload);
+      setState(() {
+        _metadataHashController.text = hash;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Invalid JSON: $e')));
+    }
+  }
+
+  void _selectMedicine(Map<String, dynamic>? medicine) {
+    if (medicine == null) return;
+
+    final payload = {
+      'source': 'preset',
+      'id': medicine['id'],
+      'name': medicine['name'],
+      'strength': medicine['strength'],
+      'form': medicine['form'],
+    };
+
+    setState(() {
+      _selectedMedicine = medicine;
+      _metadataJsonController.text = jsonEncode(payload);
+      _metadataHashController.text = HashUtils.sha256HexFromJson(
+        _metadataJsonController.text,
+      );
+    });
+  }
+
+  void _generateBatchId() {
+    final timestampHex = DateTime.now().millisecondsSinceEpoch.toRadixString(
+      16,
+    );
+    final random = Random.secure();
+    final randomBytes = List<int>.generate(4, (_) => random.nextInt(256));
+    final randomHex = randomBytes
+        .map((value) => value.toRadixString(16).padLeft(2, '0'))
+        .join();
+
+    setState(() {
+      _batchIdController.text = '0x$timestampHex$randomHex';
+    });
   }
 
   Future<void> _createBatch() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_manufactureDate == null || _expiryDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please select manufacture and expiry dates')),
-      );
-      return;
-    }
-
-    if (_expiryDate!.isBefore(_manufactureDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Expiry date must be after manufacture date')),
-      );
-      return;
-    }
 
     setState(() {
       _isLoading = true;
+      _lastResponse = null;
     });
 
     try {
-      final batchData = {
-        'drug_name': _drugNameController.text.trim(),
-        'batch_id': _batchIdController.text.trim(),
-        'manufacture_date': _manufactureDate!.toIso8601String(),
-        'expiry_date': _expiryDate!.toIso8601String(),
-        'quantity': int.parse(_quantityController.text.trim()),
-        'composition': _compositionController.text.trim(),
-        'dosage_form': _dosageFormController.text.trim(),
-        'storage_conditions': _storageConditionsController.text.trim(),
-      };
+      final response = await _supplyChainService.createBatch(
+        CreateBatchRequest(
+          batchId: _batchIdController.text.trim(),
+          metadataHash: _metadataHashController.text.trim(),
+        ),
+      );
 
-      final newBatch = await _drugService.createBatch(batchData);
+      if (!mounted) return;
+      setState(() {
+        _lastResponse = response;
+      });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Batch created successfully!')),
-        );
-
-        // Navigate to batch details or QR generation
-        Navigator.pop(context, newBatch);
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch created successfully.')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create batch: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create batch: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -116,39 +157,11 @@ class _CreateBatchPageState extends State<CreateBatchPage> {
     }
   }
 
-  Future<void> _selectManufactureDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _manufactureDate) {
-      setState(() {
-        _manufactureDate = picked;
-      });
-    }
-  }
-
-  Future<void> _selectExpiryDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 365)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null && picked != _expiryDate) {
-      setState(() {
-        _expiryDate = picked;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Batch'),
+        title: const Text('Create Batch'),
         backgroundColor: Colors.blue.shade800,
         foregroundColor: Colors.white,
         actions: [
@@ -172,257 +185,178 @@ class _CreateBatchPageState extends State<CreateBatchPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Drug Information Section
-            _buildSectionHeader('Drug Information'),
-            const SizedBox(height: 16),
-
-            CustomTextField(
-              controller: _drugNameController,
-              labelText: 'Drug Name *',
-              prefixIcon: Icon(Icons.medication),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter drug name';
-                }
-                return null;
-              },
+            const Text(
+              'Batch Details',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
             ),
             const SizedBox(height: 16),
-
-            // Batch ID Section
             Row(
               children: [
                 Expanded(
                   child: CustomTextField(
                     controller: _batchIdController,
-                    labelText: 'Batch ID *',
-                    prefixIcon: Icon(Icons.qr_code),
-                    readOnly: _generateBatchId,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter batch ID';
-                      }
-                      return null;
-                    },
+                    labelText: 'Batch ID (hex) *',
+                    prefixIcon: const Icon(Icons.qr_code),
+                    validator: (value) => Validators.validateHexString(
+                      value,
+                      fieldName: 'Batch ID',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Tooltip(
-                  message: _generateBatchId ? 'Manual Entry' : 'Auto Generate',
-                  child: IconButton(
-                    icon: Icon(_generateBatchId ? Icons.auto_mode : Icons.edit),
-                    onPressed: () {
-                      setState(() {
-                        _generateBatchId = !_generateBatchId;
-                        if (_generateBatchId) {
-                          _generateBatchIdController();
-                        } else {
-                          _batchIdController.clear();
-                        }
-                      });
-                    },
-                  ),
+                IconButton(
+                  onPressed: _generateBatchId,
+                  icon: const Icon(Icons.auto_fix_high),
+                  tooltip: 'Generate Batch ID',
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Date Selection
-            _buildDateSelection(),
+            DropdownButtonFormField<Map<String, dynamic>>(
+              value: _selectedMedicine,
+              decoration: const InputDecoration(
+                labelText: 'Select Medicine (preset)',
+                border: OutlineInputBorder(),
+              ),
+              items: _medicines
+                  .map(
+                    (medicine) => DropdownMenuItem(
+                      value: medicine,
+                      child: Text(
+                        '${medicine['name']} ${medicine['strength']} (${medicine['form']})',
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _selectMedicine,
+            ),
             const SizedBox(height: 16),
-
-            // Quantity
             CustomTextField(
-              controller: _quantityController,
-              labelText: 'Quantity *',
-              prefixIcon: Icon(Icons.format_list_numbered),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter quantity';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                if (int.parse(value) <= 0) {
-                  return 'Quantity must be greater than 0';
-                }
-                return null;
-              },
+              controller: _metadataJsonController,
+              labelText: 'Metadata JSON (optional)',
+              prefixIcon: const Icon(Icons.data_object),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _generateMetadataHash,
+                icon: const Icon(Icons.auto_fix_high),
+                label: const Text('Generate Hash'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            CustomTextField(
+              controller: _metadataHashController,
+              labelText: 'Metadata Hash (hex) *',
+              prefixIcon: const Icon(Icons.fingerprint),
+              validator: (value) => Validators.validateHexString(
+                value,
+                fieldName: 'Metadata Hash',
+              ),
             ),
             const SizedBox(height: 24),
-
-            // Drug Details Section
-            _buildSectionHeader('Drug Details'),
-            const SizedBox(height: 16),
-
-            CustomTextField(
-              controller: _compositionController,
-              labelText: 'Composition',
-              prefixIcon: Icon(Icons.science),
-              maxLines: 3,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _createBatch,
+                icon: const Icon(Icons.send),
+                label: const Text('Create Batch'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-
-            CustomTextField(
-              controller: _dosageFormController,
-              labelText: 'Dosage Form',
-              prefixIcon: Icon(Icons.medical_services),
-              hintText: 'e.g., Tablet, Capsule, Syrup',
-            ),
-            const SizedBox(height: 16),
-
-            CustomTextField(
-              controller: _storageConditionsController,
-              labelText: 'Storage Conditions',
-              prefixIcon: Icon(Icons.ac_unit),
-              maxLines: 2,
-              hintText: 'e.g., Store at 2-8°C, Protect from light',
-            ),
-            const SizedBox(height: 32),
-
-            // Action Buttons
-            _buildActionButtons(),
+            const SizedBox(height: 24),
+            if (_lastResponse != null) _buildReceiptCard(_lastResponse!),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.blue,
+  Widget _buildReceiptCard(CreateBatchResponse response) {
+    final receipt = response.receipt;
+    final qrPayload = response.qrPayload ?? _buildUnsignedQrPayload();
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Transaction Receipt',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildReceiptRow('Tx Hash', receipt.txHash ?? 'N/A'),
+            _buildReceiptRow(
+              'Block Number',
+              receipt.blockNumber?.toString() ?? 'N/A',
+            ),
+            _buildReceiptRow('Gas Used', receipt.gasUsed?.toString() ?? 'N/A'),
+            _buildReceiptRow('Status', receipt.status ?? 'N/A'),
+            if (qrPayload != null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'QR Payload',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Center(child: QrImageView(data: qrPayload, size: 180)),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildDateSelection() {
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: _selectManufactureDate,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today,
-                          color: Colors.grey.shade600, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Manufacture Date *',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _manufactureDate != null
-                        ? DateFormat('MMM dd, yyyy').format(_manufactureDate!)
-                        : 'Select date',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color:
-                          _manufactureDate != null ? Colors.black : Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+  Widget _buildReceiptRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: InkWell(
-            onTap: _selectExpiryDate,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.event_available,
-                          color: Colors.grey.shade600, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Expiry Date *',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _expiryDate != null
-                        ? DateFormat('MMM dd, yyyy').format(_expiryDate!)
-                        : 'Select date',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: _expiryDate != null ? Colors.black : Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(child: Text(value)),
+        ],
+      ),
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Cancel'),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _createBatch,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Create Batch',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
-    );
+  String? _buildUnsignedQrPayload() {
+    final batchId = _batchIdController.text.trim();
+    final metadataHash = _metadataHashController.text.trim();
+    if (batchId.isEmpty || metadataHash.isEmpty) {
+      return null;
+    }
+
+    final payload = {
+      'batchId': batchId,
+      'metadataHash': metadataHash,
+      'issuer': 'MANUFACTURER',
+      'issuedAt': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    return jsonEncode(payload);
   }
 }

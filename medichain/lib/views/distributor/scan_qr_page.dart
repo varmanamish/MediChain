@@ -1,9 +1,11 @@
 // lib/views/distributor/scan_qr_page.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../models/drug_batch_model.dart';
-import '../../services/drug_service.dart';
-import '../distributor/update_transit_page.dart';
+import '../../models/supply_chain_models.dart';
+import '../../services/supply_chain_service.dart';
+import '../supply_chain/transfer_batch_page.dart';
 
 class DistributorScanQRPage extends StatefulWidget {
   const DistributorScanQRPage({super.key});
@@ -13,11 +15,10 @@ class DistributorScanQRPage extends StatefulWidget {
 }
 
 class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
-  final DrugService _drugService = DrugService();
+  final SupplyChainService _supplyChainService = SupplyChainService();
   MobileScannerController cameraController = MobileScannerController();
   bool _isLoading = false;
   String _scannedData = '';
-  DrugBatch? _scannedBatch;
   bool _isFlashOn = false;
   bool _isCameraFacingFront = false;
 
@@ -50,43 +51,66 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
   }
 
   Future<void> _processScannedCode(String code) async {
+    await cameraController.stop();
+
     try {
-      // Stop camera to prevent multiple scans
-      await cameraController.stop();
+      final response = await _supplyChainService.verifyBatch(
+        VerifyBatchRequest(qrPayload: code),
+      );
 
-      // Fetch batch details from backend
-      final batch = await _drugService.getBatchByQrCode(code);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
 
-      if (mounted) {
-        setState(() {
-          _scannedBatch = batch;
-          _isLoading = false;
-        });
-
-        // Navigate to update transit page
-        _navigateToUpdateTransit(batch);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        _showErrorDialog('Failed to process QR code: $e');
-
-        // Restart camera after error
+      if (!response.isValid) {
+        _showErrorDialog('QR verification failed.');
         await cameraController.start();
+        return;
       }
+
+      final batchId = _extractBatchId(code, response.batchId);
+      if (batchId == null || batchId.isEmpty) {
+        _showErrorDialog('Batch ID not found in QR payload.');
+        await cameraController.start();
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TransferBatchPage(
+            title: 'Transfer Batch (Distributor)',
+            color: Colors.orange.shade800,
+            initialBatchId: batchId,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorDialog('Failed to verify QR: $e');
+      await cameraController.start();
     }
   }
 
-  void _navigateToUpdateTransit(DrugBatch batch) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UpdateTransitPage(batch: batch),
-      ),
-    );
+  String? _extractBatchId(String qrPayload, String? fallback) {
+    if (fallback != null && fallback.isNotEmpty) {
+      return fallback;
+    }
+
+    try {
+      final decoded = jsonDecode(qrPayload);
+      if (decoded is Map<String, dynamic>) {
+        return (decoded['batchId'] ?? decoded['batch_id'])?.toString();
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
   }
 
   void _showErrorDialog(String message) {
@@ -111,7 +135,6 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
   Future<void> _resetScanner() async {
     setState(() {
       _scannedData = '';
-      _scannedBatch = null;
     });
     await cameraController.start();
   }
@@ -153,12 +176,7 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              final textField =
-                  context.findAncestorStateOfType<State<TextField>>();
-              // This would need proper form handling in a real implementation
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Submit'),
           ),
         ],
@@ -181,7 +199,8 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
           ),
           IconButton(
             icon: Icon(
-                _isCameraFacingFront ? Icons.camera_front : Icons.camera_rear),
+              _isCameraFacingFront ? Icons.camera_front : Icons.camera_rear,
+            ),
             onPressed: _switchCamera,
             tooltip: 'Switch Camera',
           ),

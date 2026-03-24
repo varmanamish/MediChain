@@ -79,6 +79,8 @@ package com.example.medichain.controller;
 
 import com.example.medichain.config.JwtUtil;
 import com.example.medichain.dto.LoginRequest;
+import com.example.medichain.dto.ProductRequest;
+import com.example.medichain.dto.TransactionResponse;
 import com.example.medichain.model.User;
 import com.example.medichain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +88,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -252,6 +255,31 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
+//    @PostMapping("/createProduct")
+//    public ResponseEntity<TransactionResponse> createProduct(
+//            @RequestBody ProductRequest request) throws Exception {
+//
+//        TransactionReceipt receipt = contract.createProduct(
+//                request.getProductId(),
+//                request.getManufactureDate(),
+//                request.getExpiryDate()
+//        ).send();
+//
+//        TransactionResponse response = new TransactionResponse(
+//                receipt.getTransactionHash(),
+//                receipt.getBlockNumber(),
+//                receipt.getGasUsed(),
+//                receipt.isStatusOK() ? "SUCCESS" : "FAILED",
+//                receipt.getLogs()
+//                        .stream()
+//                        .map(log -> log.getData())
+//                        .toList()
+//        );
+//
+//        return ResponseEntity.ok(response);
+//    }
+
 
 }
 

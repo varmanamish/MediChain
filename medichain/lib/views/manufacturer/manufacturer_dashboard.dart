@@ -9,6 +9,8 @@ import '../../storage/secure_storage.dart';
 import 'create_batch_page.dart';
 import 'batch_list_page.dart';
 import 'batch_details_page.dart';
+import '../supply_chain/get_batch_page.dart';
+import '../supply_chain/history_page.dart';
 
 class ManufacturerDashboard extends StatefulWidget {
   const ManufacturerDashboard({super.key});
@@ -68,6 +70,26 @@ class _ManufacturerDashboardState extends State<ManufacturerDashboard> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadDashboardData,
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'get') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GetBatchPage()),
+                );
+              }
+              if (value == 'history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BatchHistoryPage()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'get', child: Text('Get Batch')),
+              PopupMenuItem(value: 'history', child: Text('History')),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.person),
