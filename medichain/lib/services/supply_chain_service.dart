@@ -39,6 +39,7 @@ class SupplyChainService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      print('Verification response data: ${response.data}');
       return VerifyBatchResponse.fromJson(response.data);
     }
 

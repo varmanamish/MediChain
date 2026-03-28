@@ -54,16 +54,14 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
     await cameraController.stop();
 
     try {
-      final response = await _supplyChainService.verifyBatch(
-        VerifyBatchRequest(qrPayload: code),
-      );
+      final response = await _verifyQrPayload(code);
 
       if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
-      if (!response.isValid) {
+      if (!response.isValid && !_isReceiptSuccessful(response.receipt)) {
         _showErrorDialog('QR verification failed.');
         await cameraController.start();
         return;
@@ -96,6 +94,34 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
     }
   }
 
+  Future<VerifyBatchResponse> _verifyQrPayload(String code) async {
+    try {
+      return await _supplyChainService.verifyBatch(
+        VerifyBatchRequest(qrPayload: code),
+      );
+    } catch (e) {
+      if (!_isBadRequest(e)) rethrow;
+
+      final batchId = _extractBatchId(code, null);
+      final metadataHash = _extractMetadataHash(code);
+      if (batchId == null || metadataHash == null) rethrow;
+
+      return await _supplyChainService.verifyBatch(
+        VerifyBatchRequest(batchId: batchId, metadataHash: metadataHash),
+      );
+    }
+  }
+
+  bool _isBadRequest(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('bad request') || message.contains('400');
+  }
+
+  bool _isReceiptSuccessful(SupplyChainReceipt receipt) {
+    final status = receipt.status?.toString().toLowerCase();
+    return status == '1' || status == '0x1' || status == 'success';
+  }
+
   String? _extractBatchId(String qrPayload, String? fallback) {
     if (fallback != null && fallback.isNotEmpty) {
       return fallback;
@@ -105,6 +131,20 @@ class _DistributorScanQRPageState extends State<DistributorScanQRPage> {
       final decoded = jsonDecode(qrPayload);
       if (decoded is Map<String, dynamic>) {
         return (decoded['batchId'] ?? decoded['batch_id'])?.toString();
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
+
+  String? _extractMetadataHash(String qrPayload) {
+    try {
+      final decoded = jsonDecode(qrPayload);
+      if (decoded is Map<String, dynamic>) {
+        return (decoded['metadataHash'] ?? decoded['metadata_hash'])
+            ?.toString();
       }
     } catch (_) {
       return null;

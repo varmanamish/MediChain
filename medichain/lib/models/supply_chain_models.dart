@@ -97,10 +97,19 @@ class CreateBatchResponse {
     if (json['receipt'] is Map<String, dynamic>) {
       return json['receipt'] as Map<String, dynamic>;
     }
+    if (json['transaction'] is Map<String, dynamic>) {
+      return json['transaction'] as Map<String, dynamic>;
+    }
     if (json['data'] is Map<String, dynamic> &&
         (json['data'] as Map<String, dynamic>)['receipt']
             is Map<String, dynamic>) {
       return (json['data'] as Map<String, dynamic>)['receipt']
+          as Map<String, dynamic>;
+    }
+    if (json['data'] is Map<String, dynamic> &&
+        (json['data'] as Map<String, dynamic>)['transaction'] is
+            Map<String, dynamic>) {
+      return (json['data'] as Map<String, dynamic>)['transaction']
           as Map<String, dynamic>;
     }
     return json;
